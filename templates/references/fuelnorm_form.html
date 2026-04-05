@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Редактировать{% else %}Новый{% endif %} норматив — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header fw-bold fs-5">
+                <i class="bi bi-fuel-pump me-2"></i>
+                {% if object %}Редактировать: {{ object.vehicle_type }}{% else %}Новый норматив топлива{% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Тип ТС *</label>
+                            <input type="text" name="vehicle_type" class="form-control"
+                                   value="{{ form.vehicle_type.value|default:'' }}" required maxlength="100"
+                                   placeholder="Например: Фургон, Рефрижератор, Цистерна">
+                            {% if form.vehicle_type.errors %}
+                            <div class="text-danger small">{{ form.vehicle_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Расход город, л/100км *</label>
+                            <input type="number" name="consumption_city" class="form-control" step="0.01"
+                                   value="{{ form.consumption_city.value|default:'' }}" required>
+                            {% if form.consumption_city.errors %}
+                            <div class="text-danger small">{{ form.consumption_city.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Расход трасса, л/100км *</label>
+                            <input type="number" name="consumption_highway" class="form-control" step="0.01"
+                                   value="{{ form.consumption_highway.value|default:'' }}" required>
+                            {% if form.consumption_highway.errors %}
+                            <div class="text-danger small">{{ form.consumption_highway.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Зимняя надбавка, л/100км</label>
+                            <input type="number" name="consumption_winter" class="form-control" step="0.01"
+                                   value="{{ form.consumption_winter.value|default:'0' }}">
+                            <div class="form-text">Доп. расход в зимний период</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Действует с *</label>
+                            <input type="date" name="valid_from" class="form-control"
+                                   value="{{ form.valid_from.value|default:'' }}" required>
+                            {% if form.valid_from.errors %}
+                            <div class="text-danger small">{{ form.valid_from.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Действует по</label>
+                            <input type="date" name="valid_to" class="form-control"
+                                   value="{{ form.valid_to.value|default:'' }}">
+                            <div class="form-text">Оставьте пустым для бессрочного</div>
+                        </div>
+
+                        <div class="col-12 d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-lg me-1"></i>Сохранить
+                            </button>
+                            <a href="{% url 'references:fuelnorm_list' %}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

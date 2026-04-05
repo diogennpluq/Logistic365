@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Панель управления — Логистика 365{% endblock %}
+
+{% block content %}
+{# ======== Welcome ======== #}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">
+            <i class="bi bi-speedometer2 text-primary"></i> Панель управления
+        </h2>
+        <p class="text-muted mb-0">
+            Добро пожаловать, {{ user.get_full_name|default:user.username }}!
+            Обзор на {{ today|default:"сегодня"|capfirst }}.
+        </p>
+    </div>
+</div>
+
+{# ======== Stat cards ======== #}
+<div class="row g-3 mb-4">
+    {# Активные заказы #}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card shadow-sm h-100" style="border-left-color: var(--bs-info);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted text-uppercase small mb-1">Активные заказы</p>
+                        <h3 class="fw-bold mb-0">{{ active_orders_count }}</h3>
+                    </div>
+                    <div class="stat-icon text-info">
+                        <i class="bi bi-clipboard2-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Задержки #}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card shadow-sm h-100" style="border-left-color: var(--bs-danger);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted text-uppercase small mb-1">Задержки доставки</p>
+                        <h3 class="fw-bold mb-0">{{ delayed_deliveries }}</h3>
+                    </div>
+                    <div class="stat-icon text-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ТС на линии #}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card shadow-sm h-100" style="border-left-color: var(--bs-success);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted text-uppercase small mb-1">ТС на линии</p>
+                        <h3 class="fw-bold mb-0">{{ vehicles_on_line }}</h3>
+                    </div>
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-truck-front"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Завершено сегодня #}
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card shadow-sm h-100" style="border-left-color: var(--bs-primary);">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <p class="text-muted text-uppercase small mb-1">Завершено сегодня</p>
+                        <h3 class="fw-bold mb-0">{{ completed_today }}</h3>
+                    </div>
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ======== Charts row ======== #}
+<div class="row g-3 mb-4">
+    {# Утилизация ТС — doughnut #}
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-pie-chart"></i> Распределение ТС по статусам
+            </div>
+            <div class="card-body">
+                <canvas id="vehicleStatusChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {# Рейсы за неделю — line #}
+    <div class="col-lg-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-graph-up"></i> Количество рейсов за неделю
+            </div>
+            <div class="card-body">
+                <canvas id="utilizationChart" height="260"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ======== Orders by status bar chart ======== #}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header fw-semibold">
+                <i class="bi bi-bar-chart-line"></i> Заказы по статусам
+            </div>
+            <div class="card-body">
+                <canvas id="ordersByStatusChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ======== Recent orders table ======== #}
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center fw-semibold">
+        <span><i class="bi bi-clock-history"></i> Последние заказы</span>
+        <a href="{% url 'orders:list' %}" class="btn btn-sm btn-outline-primary">
+            Все заказы <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Номер</th>
+                        <th>Клиент</th>
+                        <th>Груз</th>
+                        <th>Статус</th>
+                        <th>ТС</th>
+                        <th>Создан</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'orders:detail' order.pk %}" class="fw-semibold text-decoration-none">
+                                {{ order.order_number }}
+                            </a>
+                        </td>
+                        <td>{{ order.client.name }}</td>
+                        <td>{{ order.cargo_name|truncatechars:30 }}</td>
+                        <td>
+                            <span class="badge
+                                {% if order.status == 'completed' %}bg-success
+                                {% elif order.status == 'in_transit' or order.status == 'loaded' %}bg-primary
+                                {% elif order.status == 'assigned' %}bg-info
+                                {% elif order.status == 'confirmed' %}bg-secondary
+                                {% elif order.status == 'cancelled' %}bg-danger
+                                {% else %}bg-warning text-dark{% endif %}">
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ order.vehicle.plate_number|default:"—" }}</td>
+                        <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-inbox" style="font-size:2rem;"></i>
+                            <p class="mb-0 mt-2">Заказов пока нет</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{# ======================== Extra JS: Chart.js ======================== #}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const chartColors = {
+        info:    getComputedStyle(document.documentElement).getPropertyValue('--bs-info').trim(),
+        success: getComputedStyle(document.documentElement).getPropertyValue('--bs-success').trim(),
+        danger:  getComputedStyle(document.documentElement).getPropertyValue('--bs-danger').trim(),
+        warning: getComputedStyle(document.documentElement).getPropertyValue('--bs-warning').trim(),
+        primary: getComputedStyle(document.documentElement).getPropertyValue('--bs-primary').trim(),
+        secondary: getComputedStyle(document.documentElement).getPropertyValue('--bs-secondary').trim(),
+    };
+
+    // ---- Vehicle status doughnut ----
+    new Chart(document.getElementById('vehicleStatusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ vehicle_status_labels|safe }},
+            datasets: [{
+                data: {{ vehicle_status_values|safe }},
+                backgroundColor: [
+                    chartColors.success,
+                    chartColors.warning,
+                    chartColors.primary,
+                    chartColors.danger,
+                ],
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // ---- Utilization line chart ----
+    new Chart(document.getElementById('utilizationChart'), {
+        type: 'line',
+        data: {
+            labels: {{ utilization_dates|safe }},
+            datasets: [{
+                label: 'Рейсы',
+                data: {{ utilization_trips|safe }},
+                fill: true,
+                tension: 0.3,
+                borderColor: chartColors.info,
+                backgroundColor: chartColors.info + '33',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // ---- Orders by status bar chart ----
+    new Chart(document.getElementById('ordersByStatusChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ orders_status_labels|safe }},
+            datasets: [{
+                label: 'Заказы',
+                data: {{ orders_status_values|safe }},
+                backgroundColor: chartColors.primary,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+});
+</script>
+{% endblock %}

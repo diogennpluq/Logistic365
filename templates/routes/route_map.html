@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Карта: {{ route.name }} — Логистика 365{% endblock %}
+
+{% block extra_css %}
+<style>
+    #route-map { height: 600px; width: 100%; border-radius: 8px; }
+    .waypoint-list-item { cursor: grab; }
+    .waypoint-list-item:active { cursor: grabbing; }
+    .marker-loading { }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'routes:list' %}">Маршруты</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'routes:detail' route.pk %}">{{ route.name }}</a></li>
+                <li class="breadcrumb-item active">Карта</li>
+            </ol>
+        </nav>
+        <h4><i class="bi bi-map me-2"></i>{{ route.name }}</h4>
+    </div>
+    <div class="d-flex gap-2">
+        {% if not has_coords %}
+        <a href="{% url 'routes:geocode' route.pk %}" class="btn btn-outline-warning">
+            <i class="bi bi-geo me-1"></i>Авторасставить координаты
+        </a>
+        {% endif %}
+        <a href="{% url 'routes:detail' route.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Назад
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <!-- Карта -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body p-0">
+                <div id="route-map"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список точек -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header fw-bold">
+                <i class="bi bi-list-ol me-1"></i>Точки маршрута ({{ waypoints|length }})
+            </div>
+            <div class="card-body p-0">
+                {% if waypoints %}
+                <div class="list-group list-group-flush" id="waypoints-list">
+                    {% for wp in waypoints %}
+                    <div class="list-group-item waypoint-list-item p-3"
+                         data-id="{{ wp.id }}"
+                         data-lat="{{ wp.lat|default:'' }}"
+                         data-lng="{{ wp.lng|default:'' }}">
+                        <div class="d-flex align-items-start gap-2">
+                            <!-- Маркер -->
+                            <span class="badge rounded-pill {% if wp.visited %}bg-success{% elif wp.type == 'loading' %}bg-primary{% elif wp.type == 'unloading' %}bg-danger{% else %}bg-secondary{% endif %}">
+                                {{ wp.sequence }}
+                            </span>
+                            <div class="flex-grow-1">
+                                <div class="fw-bold small">
+                                    {% if wp.type == "loading" %}📦 Погрузка
+                                    {% elif wp.type == "unloading" %}📭 Разгрузка
+                                    {% else %}📍 Промежуточная{% endif %}
+                                </div>
+                                <div class="text-muted small">{{ wp.address|truncatechars:35 }}</div>
+                                {% if wp.order_number %}
+                                <div class="small text-primary">{{ wp.order_number }}</div>
+                                {% endif %}
+                                {% if not wp.lat %}
+                                <div class="small text-warning">⚠ Нет координат</div>
+                                {% endif %}
+                                {% if wp.visited %}
+                                <div class="small text-success">✓ Посещена</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-geo-alt" style="font-size: 2rem;"></i>
+                    <p class="mt-2">Нет точек</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Легенда -->
+        <div class="card mt-3">
+            <div class="card-header fw-bold small">Легенда</div>
+            <div class="card-body small">
+                <div><span class="badge bg-primary">●</span> Погрузка</div>
+                <div><span class="badge bg-danger">●</span> Разгрузка</div>
+                <div><span class="badge bg-secondary">●</span> Промежуточная</div>
+                <div><span class="badge bg-success">●</span> Посещена</div>
+                <div><span class="text-warning">⚠</span> Нет координат</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const waypoints = [
+        {% for wp in waypoints %}
+        {
+            id: {{ wp.id }},
+            lat: {{ wp.lat|default:"null" }},
+            lng: {{ wp.lng|default:"null" }},
+            type: '{{ wp.type }}',
+            type_display: '{{ wp.type_display }}',
+            address: '{{ wp.address|escapejs }}',
+            sequence: {{ wp.sequence }},
+            visited: {{ wp.visited|yesno:"true,false" }},
+            order_number: {{ wp.order_number|default:"null"|yesno:"'"|add:wp.order_number|add:"'"|default:"null" }},
+            notes: '{{ wp.notes|escapejs }}',
+        },
+        {% endfor %}
+    ];
+
+    // Инициализация карты
+    const map = L.map('route-map').setView([55.75, 37.62], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+        maxZoom: 19,
+    }).addTo(map);
+
+    // Иконки для типов точек
+    function createIcon(color) {
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="
+                background: ${color};
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                border: 3px solid white;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            "></div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+        });
+    }
+
+    const icons = {
+        loading: createIcon('#0d6efd'),
+        unloading: createIcon('#dc3545'),
+        intermediate: createIcon('#6c757d'),
+        visited: createIcon('#198754'),
+    };
+
+    const markers = [];
+    const coords = [];
+
+    waypoints.forEach(function (wp) {
+        if (!wp.lat || !wp.lng) return;
+
+        const color = wp.visited ? 'visited' : wp.type;
+        const icon = icons[color];
+
+        const marker = L.marker([wp.lat, wp.lng], { icon: icon }).addTo(map);
+
+        let popupContent = `
+            <strong>[${wp.sequence}] ${wp.type_display}</strong><br>
+            <em>${wp.address}</em><br>
+        `;
+        if (wp.order_number) {
+            popupContent += `Заказ: ${wp.order_number}<br>`;
+        }
+        if (wp.notes) {
+            popupContent += `${wp.notes}`;
+        }
+
+        marker.bindPopup(popupContent);
+        markers.push(marker);
+        coords.push([wp.lat, wp.lng]);
+    });
+
+    // Линия маршрута
+    if (coords.length >= 2) {
+        L.polyline(coords, {
+            color: '#0d6efd',
+            weight: 4,
+            opacity: 0.8,
+            dashArray: '8, 6',
+        }).addTo(map);
+
+        // Нумерация на линии
+        coords.forEach(function (c, i) {
+            if (i < coords.length - 1) {
+                const midLat = (c[0] + coords[i + 1][0]) / 2;
+                const midLng = (c[1] + coords[i + 1][1]) / 2;
+            }
+        });
+    }
+
+    // Авто-масштаб
+    if (coords.length > 0) {
+        map.fitBounds(coords, { padding: [50, 50] });
+    }
+
+    // Подсветка точки при наведении на список
+    document.querySelectorAll('.waypoint-list-item').forEach(function (el) {
+        el.addEventListener('mouseenter', function () {
+            const id = parseInt(this.dataset.id);
+            const wp = waypoints.find(w => w.id === id);
+            if (wp && wp.lat && wp.lng) {
+                const marker = markers.find(m => {
+                    const ll = m.getLatLng();
+                    return Math.abs(ll.lat - wp.lat) < 0.0001 && Math.abs(ll.lng - wp.lng) < 0.0001;
+                });
+                if (marker) marker.openPopup();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

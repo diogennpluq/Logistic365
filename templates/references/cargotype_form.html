@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Редактировать{% else %}Новый{% endif %} тип груза — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header fw-bold fs-5">
+                <i class="bi bi-box-seam me-2"></i>
+                {% if object %}Редактировать: {{ object.name }}{% else %}Новый тип груза{% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Название *</label>
+                            <input type="text" name="name" class="form-control"
+                                   value="{{ form.name.value|default:'' }}" required maxlength="100">
+                            {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Класс опасности</label>
+                            <input type="number" name="hazard_class" class="form-control" min="0" max="9"
+                                   value="{{ form.hazard_class.value|default:'0' }}">
+                            <div class="form-text">0 — неопасный, 1–9 — классы опасности</div>
+                            {% if form.hazard_class.errors %}
+                            <div class="text-danger small">{{ form.hazard_class.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">Описание</label>
+                            <textarea name="description" class="form-control" rows="3"
+                                      maxlength="500">{{ form.description.value|default:'' }}</textarea>
+                        </div>
+
+                        <div class="col-12 d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-check-lg me-1"></i>Сохранить
+                            </button>
+                            <a href="{% url 'references:cargotype_list' %}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

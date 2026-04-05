@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{% if object %}Редактировать{% else %}Новый{% endif %} клиент — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-bold fs-5">
+                <i class="bi bi-building me-2"></i>
+                {% if object %}Редактировать: {{ object.name }}{% else %}Новый клиент{% endif %}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <!-- Название -->
+                        <div class="col-12">
+                            <label class="form-label">Название организации *</label>
+                            <input type="text" name="name" class="form-control"
+                                   value="{{ form.name.value|default:'' }}" required>
+                            {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- ИНН -->
+                        <div class="col-md-4">
+                            <label class="form-label">ИНН</label>
+                            <input type="text" name="inn" class="form-control" maxlength="12"
+                                   value="{{ form.inn.value|default:'' }}">
+                            {% if form.inn.errors %}
+                            <div class="text-danger small">{{ form.inn.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Юр. адрес -->
+                        <div class="col-md-8">
+                            <label class="form-label">Юридический адрес</label>
+                            <input type="text" name="legal_address" class="form-control"
+                                   value="{{ form.legal_address.value|default:'' }}">
+                        </div>
+
+                        <!-- Контактное лицо -->
+                        <div class="col-md-6">
+                            <label class="form-label">Контактное лицо</label>
+                            <input type="text" name="contact_person" class="form-control"
+                                   value="{{ form.contact_person.value|default:'' }}">
+                        </div>
+
+                        <!-- Телефон -->
+                        <div class="col-md-3">
+                            <label class="form-label">Телефон</label>
+                            <input type="text" name="contact_phone" class="form-control" maxlength="20"
+                                   value="{{ form.contact_phone.value|default:'' }}">
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" name="contact_email" class="form-control"
+                                   value="{{ form.contact_email.value|default:'' }}">
+                        </div>
+
+                        <!-- Номер договора -->
+                        <div class="col-md-4">
+                            <label class="form-label">Номер договора</label>
+                            <input type="text" name="contract_number" class="form-control" maxlength="50"
+                                   value="{{ form.contract_number.value|default:'' }}">
+                        </div>
+
+                        <!-- Дата договора -->
+                        <div class="col-md-4">
+                            <label class="form-label">Дата договора</label>
+                            <input type="date" name="contract_date" class="form-control"
+                                   value="{{ form.contract_date.value|default:'' }}">
+                        </div>
+
+                        <!-- Активен -->
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                       {% if form.is_active.value or not object %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">Активен</label>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="col-12 d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Сохранить
+                            </button>
+                            {% if object %}
+                                <a href="{% url 'references:client_detail' object.pk %}" class="btn btn-outline-secondary">Отмена</a>
+                            {% else %}
+                                <a href="{% url 'references:client_list' %}" class="btn btn-outline-secondary">Отмена</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отчёт по ТС — Отчёты — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'reports:index' %}">Отчёты</a></li>
+                <li class="breadcrumb-item active">Эффективность ТС</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0"><i class="bi bi-truck me-2"></i>Эффективность ТС</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&status={{ current_status }}&export=excel"
+           class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&status={{ current_status }}&export=csv"
+           class="btn btn-outline-success">
+            <i class="bi bi-filetype-csv me-1"></i>CSV
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Дата с</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Дата по</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Статус ТС</label>
+                <select name="status" class="form-select">
+                    <option value="">Все</option>
+                    <option value="ok" {% if current_status == "ok" %}selected{% endif %}>Исправен</option>
+                    <option value="on_line" {% if current_status == "on_line" %}selected{% endif %}>На линии</option>
+                    <option value="repair" {% if current_status == "repair" %}selected{% endif %}>В ремонте</option>
+                    <option value="write_off" {% if current_status == "write_off" %}selected{% endif %}>Списан</option>
+                </select>
+            </div>
+            <div class="col-md-5 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>Сформировать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Сводка -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <div class="text-muted small">Всего рейсов</div>
+                <div class="fs-3 fw-bold text-primary">{{ total_trips }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <div class="text-muted small">Общий пробег</div>
+                <div class="fs-3 fw-bold text-success">{{ total_mileage }} км</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <div class="text-muted small">Общий расход топлива</div>
+                <div class="fs-3 fw-bold text-info">{{ total_fuel }} л</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Таблица -->
+{% if vehicle_data %}
+<div class="card">
+    <div class="card-header fw-bold">Детализация по ТС</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ТС</th>
+                        <th>Тип</th>
+                        <th>Статус</th>
+                        <th>Рейсов</th>
+                        <th>Заказов</th>
+                        <th>Пробег (км)</th>
+                        <th>Топливо (л)</th>
+                        <th>Ср. расход л/100км</th>
+                        <th>Ср. вес (кг)</th>
+                        <th>Ср. объём (м³)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in vehicle_data %}
+                    <tr>
+                        <td>
+                            <strong>{{ v.vehicle.plate_number }}</strong>
+                            <div class="small text-muted">{{ v.vehicle.brand }} {{ v.vehicle.model }}</div>
+                        </td>
+                        <td>{{ v.vehicle.get_vehicle_type_display }}</td>
+                        <td>
+                            {% if v.vehicle.status == "ok" %}<span class="badge bg-success">Исправен</span>
+                            {% elif v.vehicle.status == "on_line" %}<span class="badge bg-primary">На линии</span>
+                            {% elif v.vehicle.status == "repair" %}<span class="badge bg-warning text-dark">В ремонте</span>
+                            {% elif v.vehicle.status == "write_off" %}<span class="badge bg-danger">Списан</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-info">{{ v.trip_count }}</span></td>
+                        <td>{{ v.order_count }}</td>
+                        <td>{{ v.total_mileage }}</td>
+                        <td>{{ v.total_fuel }}</td>
+                        <td>{{ v.avg_consumption }}</td>
+                        <td>{{ v.avg_weight }}</td>
+                        <td>{{ v.avg_volume }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-truck" style="font-size: 3rem;"></i>
+        <p class="mt-2">Нет данных за выбранный период</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

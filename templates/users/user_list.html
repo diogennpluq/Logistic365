@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Пользователи — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-people"></i> Пользователи</h1>
+</div>
+
+{# Фильтры #}
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex align-items-center gap-2 flex-wrap">
+            <select name="role" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Все роли</option>
+                {% for value, label in roles %}
+                    <option value="{{ value }}" {% if current_role == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <select name="is_active" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Все</option>
+                <option value="1" {% if current_active == "1" %}selected{% endif %}>Активные</option>
+                <option value="0" {% if current_active == "0" %}selected{% endif %}>Неактивные</option>
+            </select>
+            {% if current_role or current_active %}
+                <a href="{% url 'users:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Пользователь</th>
+                            <th>Имя пользователя</th>
+                            <th>Роль</th>
+                            <th>Email</th>
+                            <th>Телефон</th>
+                            <th>Активен</th>
+                            <th>Создан</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                            <tr>
+                                <td class="fw-semibold">
+                                    <div class="d-flex align-items-center">
+                                        {% if u.avatar %}
+                                            <img src="{{ u.avatar.url }}" alt="" class="rounded-circle me-2" width="32" height="32">
+                                        {% else %}
+                                            <div class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;">
+                                                {{ u.first_name|default:u.username|first|upper }}
+                                            </div>
+                                        {% endif %}
+                                        {{ u.get_full_name|default:u.username }}
+                                    </div>
+                                </td>
+                                <td><small>{{ u.username }}</small></td>
+                                <td>
+                                    {% if u.role == "admin" %}
+                                        <span class="badge bg-danger">{{ u.get_role_display }}</span>
+                                    {% elif u.role == "dispatcher" %}
+                                        <span class="badge bg-primary">{{ u.get_role_display }}</span>
+                                    {% elif u.role == "driver" %}
+                                        <span class="badge bg-success">{{ u.get_role_display }}</span>
+                                    {% elif u.role == "accountant" %}
+                                        <span class="badge bg-info">{{ u.get_role_display }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ u.get_role_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td><small>{{ u.email|default:"—" }}</small></td>
+                                <td><small>{{ u.phone|default:"—" }}</small></td>
+                                <td>
+                                    {% if u.is_active %}
+                                        <span class="badge bg-success">Да</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Нет</span>
+                                    {% endif %}
+                                </td>
+                                <td><small class="text-muted">{{ u.created_at|date:"d.m.Y" }}</small></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-person-x display-4 text-muted"></i>
+                <p class="text-muted mt-2">Пользователи не найдены</p>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if is_paginated %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if current_role %}&role={{ current_role }}{% endif %}{% if current_active %}&is_active={{ current_active }}{% endif %}"><i class="bi bi-chevron-bar-left"></i></a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_role %}&role={{ current_role }}{% endif %}{% if current_active %}&is_active={{ current_active }}{% endif %}"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_role %}&role={{ current_role }}{% endif %}{% if current_active %}&is_active={{ current_active }}{% endif %}"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ paginator.num_pages }}{% if current_role %}&role={{ current_role }}{% endif %}{% if current_active %}&is_active={{ current_active }}{% endif %}"><i class="bi bi-chevron-bar-right"></i></a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

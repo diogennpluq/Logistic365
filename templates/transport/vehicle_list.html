@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Транспортные средства — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-truck-front"></i> Транспортные средства</h1>
+</div>
+
+{# Фильтр по статусу #}
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="get" class="d-flex align-items-center gap-2">
+            <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                <option value="">Все статусы</option>
+                {% for value, label in statuses %}
+                    <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            {% if current_status %}
+                <a href="{% url 'transport:list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if vehicles %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Гос. номер</th>
+                            <th>Тип</th>
+                            <th>Марка / Модель</th>
+                            <th>Грузоподъёмность</th>
+                            <th>Объём</th>
+                            <th>Пробег</th>
+                            <th>ТО до</th>
+                            <th>Статус</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for v in vehicles %}
+                            <tr>
+                                <td class="fw-semibold">{{ v.plate_number }}</td>
+                                <td>{{ v.get_vehicle_type_display }}</td>
+                                <td>{{ v.brand }} {{ v.model }}</td>
+                                <td>{{ v.capacity_kg }} кг</td>
+                                <td>{{ v.volume_m3 }} м³</td>
+                                <td>{{ v.current_mileage }} км</td>
+                                <td>
+                                    {% if v.next_maintenance %}
+                                        {{ v.next_maintenance|date:"d.m.Y" }}
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if v.status == "ok" %}
+                                        <span class="badge bg-success">Исправен</span>
+                                    {% elif v.status == "repair" %}
+                                        <span class="badge bg-warning text-dark">В ремонте</span>
+                                    {% elif v.status == "on_line" %}
+                                        <span class="badge bg-primary">На линии</span>
+                                    {% elif v.status == "write_off" %}
+                                        <span class="badge bg-danger">Списан</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">{{ v.status }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-truck display-4 text-muted"></i>
+                <p class="text-muted mt-2">Транспортные средства не найдены</p>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if is_paginated %}
+        <div class="card-footer">
+            <nav>
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if current_status %}&status={{ current_status }}{% endif %}"><i class="bi bi-chevron-bar-left"></i></a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"><i class="bi bi-chevron-left"></i></a>
+                        </li>
+                    {% endif %}
+                    <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}"><i class="bi bi-chevron-right"></i></a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ paginator.num_pages }}{% if current_status %}&status={{ current_status }}{% endif %}"><i class="bi bi-chevron-bar-right"></i></a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

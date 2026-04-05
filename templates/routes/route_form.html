@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }} — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header fw-bold fs-5">
+                <i class="bi bi-signpost-2 me-2"></i>{{ title }}
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <!-- Название -->
+                        <div class="col-12">
+                            <label class="form-label">Название маршрута *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                            <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Транспорт -->
+                        <div class="col-md-6">
+                            <label class="form-label">Транспортное средство *</label>
+                            {{ form.vehicle }}
+                            {% if form.vehicle.errors %}
+                            <div class="text-danger small">{{ form.vehicle.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Водитель -->
+                        <div class="col-md-6">
+                            <label class="form-label">Водитель *</label>
+                            {{ form.driver }}
+                            {% if form.driver.errors %}
+                            <div class="text-danger small">{{ form.driver.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Дата отправления -->
+                        <div class="col-md-6">
+                            <label class="form-label">Дата/время отправления</label>
+                            {{ form.departure_datetime }}
+                            {% if form.departure_datetime.errors %}
+                            <div class="text-danger small">{{ form.departure_datetime.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Примечания -->
+                        <div class="col-md-6">
+                            <label class="form-label">Примечания</label>
+                            {{ form.notes }}
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="col-12 d-flex gap-2 mt-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-lg me-1"></i>Сохранить
+                            </button>
+                            <a href="{% url 'routes:list' %}" class="btn btn-outline-secondary">Отмена</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Подсказка -->
+        <div class="card mt-3 border-info">
+            <div class="card-body">
+                <h6 class="text-info"><i class="bi bi-info-circle me-1"></i>Следующие шаги</h6>
+                <ol class="mb-0 small">
+                    <li>Создайте маршрут</li>
+                    <li>На странице маршрута добавьте заказы — точки погрузки/разгрузки появятся автоматически</li>
+                    <li>Проверьте загрузку ТС (вес/объём)</li>
+                    <li>Нажмите «Пересчитать» для расчёта расстояния и времени</li>
+                    <li>Откройте карту маршрута для визуализации</li>
+                    <li>Нажмите «Начать» когда всё готово</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

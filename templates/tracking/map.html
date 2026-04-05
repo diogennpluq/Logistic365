@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Отслеживание транспорта — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Отслеживание транспорта</h2>
+</div>
+
+{# Статистика #}
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-primary">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon text-primary me-3" style="font-size:2rem;">
+                    <i class="bi bi-truck-front"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Всего ТС</div>
+                    <div class="fs-3 fw-bold text-primary">{{ total_vehicles }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon text-success me-3" style="font-size:2rem;">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">С координатами</div>
+                    <div class="fs-3 fw-bold text-success">{{ vehicles_with_coords_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body d-flex align-items-center">
+                <div class="stat-icon text-warning me-3" style="font-size:2rem;">
+                    <i class="bi bi-geo"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Без координат</div>
+                    <div class="fs-3 fw-bold text-warning">{{ vehicles_without_coords_count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Карта #}
+<div class="card">
+    <div class="card-header fw-bold">
+        <i class="bi bi-map me-1"></i>Карта
+        {% if total_vehicles == 0 %}
+            <span class="badge bg-warning ms-2">Нет активных ТС</span>
+        {% elif vehicles_with_coords_count == 0 %}
+            <span class="badge bg-warning ms-2">Нет координат — добавьте события отслеживания</span>
+        {% else %}
+            <span class="badge bg-success ms-2">{{ vehicles_with_coords_count }} на карте</span>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        {% if vehicles_with_coords_count > 0 %}
+            <div id="map" style="height: 600px;"></div>
+        {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-geo-alt" style="font-size: 3rem;"></i>
+                <p class="mt-3">Нет транспортных средств с координатами для отображения на карте</p>
+                {% if vehicles_without_coords_count > 0 %}
+                    <p class="small text-muted">{{ vehicles_without_coords_count }} ТС без координат (ожидание событий отслеживания)</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{# Список ТС без координат #}
+{% if vehicles_without_coords %}
+<div class="card mt-4">
+    <div class="card-header fw-bold text-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>ТС без координат
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Гос. номер</th>
+                    <th>Тип</th>
+                    <th>Марка/Модель</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vehicles_without_coords %}
+                <tr>
+                    <td><code>{{ v.plate_number }}</code></td>
+                    <td>{{ v.vehicle_type }}</td>
+                    <td>{{ v.brand_model|default:"—" }}</td>
+                    <td>{{ v.status_display }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if vehicles_with_coords_count > 0 %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var vehicles = {{ vehicles_json|safe }};
+
+    var map = L.map('map').setView([55.75, 37.62], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+        maxZoom: 19,
+    }).addTo(map);
+
+    var markers = [];
+    var bounds = [];
+
+    vehicles.forEach(function (v) {
+        if (!v.lat || !v.lng) return;
+
+        var color = v.status === 'on_line' ? '#0d6efd' : '#198754';
+        var icon = L.divIcon({
+            className: 'custom-marker',
+            html: '<div style="background:' + color + ';width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10],
+        });
+
+        var marker = L.marker([v.lat, v.lng], { icon: icon }).addTo(map);
+        marker.bindPopup(
+            '<strong>' + v.plate_number + '</strong><br>' +
+            (v.brand_model ? v.brand_model + '<br>' : '') +
+            'Статус: ' + v.status_display
+        );
+
+        markers.push(marker);
+        bounds.push([v.lat, v.lng]);
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

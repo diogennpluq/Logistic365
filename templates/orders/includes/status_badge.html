@@ -1,0 +1,19 @@
+{% if status == "draft" %}
+    <span class="badge bg-secondary">Черновик</span>
+{% elif status == "confirmed" %}
+    <span class="badge bg-info">Подтверждён</span>
+{% elif status == "assigned" %}
+    <span class="badge bg-primary">Назначен</span>
+{% elif status == "in_transit" %}
+    <span class="badge bg-warning text-dark">В пути</span>
+{% elif status == "loaded" %}
+    <span class="badge bg-success">Загружен</span>
+{% elif status == "unloaded" %}
+    <span class="badge bg-success">Выгружен</span>
+{% elif status == "completed" %}
+    <span class="badge bg-success">Завершён</span>
+{% elif status == "cancelled" %}
+    <span class="badge bg-danger">Отменён</span>
+{% else %}
+    <span class="badge bg-light text-dark">{{ status }}</span>
+{% endif %}

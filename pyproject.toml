@@ -1,0 +1,14 @@
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "logistic365.settings"
+python_files = "tests.py test_*.py *_tests.py"
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/migrations/*", "*/tests/*", "*/test_*.py", "*/manage.py", "*/wsgi.py", "*/asgi.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __str__",
+    "class Meta:",
+]

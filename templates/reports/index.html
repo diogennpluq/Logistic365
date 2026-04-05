@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отчёты — Логистика 365{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-bar-chart-line me-2"></i>Отчёты и аналитика</h2>
+
+<!-- Сводные метрики -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-muted small">Всего заказов</div>
+                        <div class="fs-3 fw-bold">{{ total_orders }}</div>
+                    </div>
+                    <i class="bi bi-clipboard-data text-primary" style="font-size:2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-muted small">Заказов в этом месяце</div>
+                        <div class="fs-3 fw-bold">{{ orders_this_month }}</div>
+                    </div>
+                    <i class="bi bi-calendar-check text-success" style="font-size:2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-muted small">Завершено в этом месяце</div>
+                        <div class="fs-3 fw-bold">{{ completed_this_month }}</div>
+                    </div>
+                    <i class="bi bi-check-circle text-info" style="font-size:2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="text-muted small">ТС на линии</div>
+                        <div class="fs-3 fw-bold">{{ vehicles_on_line }}</div>
+                    </div>
+                    <i class="bi bi-truck text-warning" style="font-size:2rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Карточки разделов -->
+<div class="row g-4 mb-4">
+    <!-- Сводный дашборд -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-primary">
+            <div class="card-body text-center">
+                <i class="bi bi-speedometer2 text-primary" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Сводный дашборд</h5>
+                <p class="text-muted small">KPI, графики, тренды</p>
+                <a href="{% url 'reports:dashboard' %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-right me-1"></i>Открыть
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Отчёт по заказам -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-success">
+            <div class="card-body text-center">
+                <i class="bi bi-clipboard-data text-success" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Отчёт по заказам</h5>
+                <p class="text-muted small">Клиенты, статусы, даты, экспорт</p>
+                <a href="{% url 'reports:orders' %}" class="btn btn-success">
+                    <i class="bi bi-arrow-right me-1"></i>Открыть
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Отчёт по ТС -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-info">
+            <div class="card-body text-center">
+                <i class="bi bi-truck text-info" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Эффективность ТС</h5>
+                <p class="text-muted small">Пробег, топливо, рейсы</p>
+                <a href="{% url 'reports:vehicles' %}" class="btn btn-info">
+                    <i class="bi bi-arrow-right me-1"></i>Открыть
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Отчёт по водителям -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-warning">
+            <div class="card-body text-center">
+                <i class="bi bi-person-badge text-warning" style="font-size: 3rem;"></i>
+                <h5 class="mt-3">Отчёт по водителям</h5>
+                <p class="text-muted small">Выработка, нарушения</p>
+                <a href="{% url 'reports:drivers' %}" class="btn btn-warning">
+                    <i class="bi bi-arrow-right me-1"></i>Открыть
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Последние рейсы -->
+{% if recent_trips %}
+<div class="card">
+    <div class="card-header fw-bold">
+        <i class="bi bi-clock-history me-1"></i>Последние рейсы
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Водитель</th>
+                        <th>ТС</th>
+                        <th>Выезд</th>
+                        <th>Возврат</th>
+                        <th>Пробег</th>
+                        <th>Топливо</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trip in recent_trips %}
+                    <tr>
+                        <td>{{ trip.driver.full_name }}</td>
+                        <td><code>{{ trip.vehicle.plate_number }}</code></td>
+                        <td>{{ trip.departure_date|date:"d.m.Y H:i" }}</td>
+                        <td>{{ trip.arrival_date|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td>{{ trip.mileage }} км</td>
+                        <td>{{ trip.fuel_consumed }} л</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

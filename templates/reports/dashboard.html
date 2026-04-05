@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Сводный дашборд — Отчёты — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'reports:index' %}">Отчёты</a></li>
+                <li class="breadcrumb-item active">Сводный дашборд</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0"><i class="bi bi-speedometer2 me-2"></i>Сводный дашборд</h2>
+    </div>
+</div>
+
+<!-- KPI карточки -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary border-start-4">
+            <div class="card-body">
+                <div class="text-muted small">Активных заказов</div>
+                <div class="fs-2 fw-bold text-primary">{{ kpi.active_orders }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-danger border-start-4">
+            <div class="card-body">
+                <div class="text-muted small">Задержанных доставок</div>
+                <div class="fs-2 fw-bold text-danger">{{ kpi.delayed_orders }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success border-start-4">
+            <div class="card-body">
+                <div class="text-muted small">ТС на линии</div>
+                <div class="fs-2 fw-bold text-success">{{ kpi.vehicles_on_line }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info border-start-4">
+            <div class="card-body">
+                <div class="text-muted small">Завершено сегодня</div>
+                <div class="fs-2 fw-bold text-info">{{ kpi.completed_today }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика за месяц -->
+<div class="card mb-4">
+    <div class="card-header fw-bold">Статистика за месяц</div>
+    <div class="card-body">
+        <div class="row text-center g-2">
+            <div class="col-md-3">
+                <div class="p-3 border rounded">
+                    <div class="text-muted small">Создано заказов</div>
+                    <div class="fs-4 fw-bold">{{ month.orders }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 border rounded">
+                    <div class="text-muted small">Завершено</div>
+                    <div class="fs-4 fw-bold text-success">{{ month.completed }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 border rounded">
+                    <div class="text-muted small">Отменено</div>
+                    <div class="fs-4 fw-bold text-danger">{{ month.cancelled }}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 border rounded">
+                    <div class="text-muted small">Общий вес грузов</div>
+                    <div class="fs-4 fw-bold">{{ month.weight_kg|floatformat:0 }} кг</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Графики -->
+<div class="row g-4 mb-4">
+    <!-- Заказы по статусам -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Заказы по статусам</div>
+            <div class="card-body">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Заказы по дням -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Заказы за 7 дней</div>
+            <div class="card-body">
+                <canvas id="dailyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статус ТС -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header fw-bold">Статус парка ТС</div>
+            <div class="card-body">
+                <canvas id="vehicleChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Рейтинги -->
+<div class="row g-4">
+    <!-- Топ клиентов -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header fw-bold">
+                <i class="bi bi-trophy me-1"></i>Топ-5 клиентов
+            </div>
+            <div class="card-body p-0">
+                {% if top_clients %}
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>#</th><th>Клиент</th><th>Заказов</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in top_clients %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ c.name }}</td>
+                            <td><span class="badge bg-primary">{{ c.order_count }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-3 text-muted">Нет данных</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Топ водителей -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header fw-bold">
+                <i class="bi bi-trophy me-1"></i>Топ-5 водителей
+            </div>
+            <div class="card-body p-0">
+                {% if top_drivers %}
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>#</th><th>Водитель</th><th>Заказов</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in top_drivers %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>{{ d.full_name }}</td>
+                            <td><span class="badge bg-warning">{{ d.order_count }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-3 text-muted">Нет данных</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Недельная сводка по рейсам -->
+{% if week_trips %}
+<div class="card mt-4">
+    <div class="card-header fw-bold">
+        <i class="bi bi-calendar-week me-1"></i>Рейсы за неделю
+        <span class="badge bg-secondary ms-2">{{ week_trips|length }}</span>
+        <span class="ms-2 small text-muted">
+            Пробег: {{ week_mileage }} км | Топливо: {{ week_fuel }} л
+        </span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Водитель</th>
+                        <th>ТС</th>
+                        <th>Выезд</th>
+                        <th>Возврат</th>
+                        <th>Пробег</th>
+                        <th>Топливо</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trip in week_trips %}
+                    <tr>
+                        <td>{{ trip.driver.full_name }}</td>
+                        <td><code>{{ trip.vehicle.plate_number }}</code></td>
+                        <td>{{ trip.departure_date|date:"d.m.Y H:i" }}</td>
+                        <td>{{ trip.arrival_date|date:"d.m.Y H:i"|default:"—" }}</td>
+                        <td>{{ trip.mileage }} км</td>
+                        <td>{{ trip.fuel_consumed }} л</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const theme = localStorage.getItem('theme') || 'light';
+    const textColor = theme === 'dark' ? '#e0e0e0' : '#333';
+    const gridColor = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+
+    // График статусов (doughnut)
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for s in status_data %}'{{ s.label }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    data: [{% for s in status_data %}{{ s.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: ['#6c757d', '#0dcaf0', '#0d6efd', '#ffc107', '#198754', '#fd7e14', '#20c997', '#dc3545'],
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'bottom', labels: { color: textColor } } }
+            }
+        });
+    }
+
+    // График заказов по дням (line)
+    const dailyCtx = document.getElementById('dailyChart');
+    if (dailyCtx) {
+        new Chart(dailyCtx, {
+            type: 'line',
+            data: {
+                labels: [{% for d in daily_orders %}'{{ d.date }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Заказы',
+                    data: [{% for d in daily_orders %}{{ d.count }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13,110,253,0.1)',
+                    fill: true,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    // График статуса ТС (bar)
+    const vehicleCtx = document.getElementById('vehicleChart');
+    if (vehicleCtx) {
+        new Chart(vehicleCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for k, v in vehicle_stats.items %}'{{ k }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'ТС',
+                    data: [{% for k, v in vehicle_stats.items %}{{ v }}{% if not forloop.last %},{% endif %}{% endfor %}],
+                    backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#dc3545'],
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отчёт по заказам — Отчёты — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'reports:index' %}">Отчёты</a></li>
+                <li class="breadcrumb-item active">Отчёт по заказам</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Отчёт по заказам</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&client_id={{ current_client }}&status={{ current_status }}&export=excel"
+           class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&client_id={{ current_client }}&status={{ current_status }}&export=csv"
+           class="btn btn-outline-success">
+            <i class="bi bi-filetype-csv me-1"></i>CSV
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Дата с</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Дата по</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Клиент</label>
+                <select name="client_id" class="form-select">
+                    <option value="">Все</option>
+                    {% for c in clients %}
+                    <option value="{{ c.pk }}" {% if current_client == c.pk|stringformat:"s" %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все</option>
+                    {% for code, label in orders.0.get_status_choices|default:"" %}
+                    {% endfor %}
+                    <option value="draft" {% if current_status == "draft" %}selected{% endif %}>Черновик</option>
+                    <option value="confirmed" {% if current_status == "confirmed" %}selected{% endif %}>Подтверждён</option>
+                    <option value="assigned" {% if current_status == "assigned" %}selected{% endif %}>Назначен</option>
+                    <option value="in_transit" {% if current_status == "in_transit" %}selected{% endif %}>В пути</option>
+                    <option value="loaded" {% if current_status == "loaded" %}selected{% endif %}>Загружен</option>
+                    <option value="unloaded" {% if current_status == "unloaded" %}selected{% endif %}>Выгружен</option>
+                    <option value="completed" {% if current_status == "completed" %}selected{% endif %}>Завершён</option>
+                    <option value="cancelled" {% if current_status == "cancelled" %}selected{% endif %}>Отменён</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>Сформировать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Сводка -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <div class="text-muted small">Всего заказов</div>
+                <div class="fs-3 fw-bold text-primary">{{ total }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <div class="text-muted small">Завершено</div>
+                <div class="fs-3 fw-bold text-success">{{ completed }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <div class="text-muted small">Общий вес</div>
+                <div class="fs-3 fw-bold">{{ total_weight|floatformat:0 }} кг</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <div class="text-muted small">Общий объём</div>
+                <div class="fs-3 fw-bold">{{ total_volume|floatformat:1 }} м³</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Распределение по статусам -->
+{% if by_status %}
+<div class="card mb-4">
+    <div class="card-header fw-bold">Распределение по статусам</div>
+    <div class="card-body">
+        <div class="row g-2">
+            {% for s in by_status %}
+            <div class="col-md-3">
+                <div class="d-flex justify-content-between p-2 border rounded">
+                    <span>{{ s.label }}</span>
+                    <strong>{{ s.count }}</strong>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Топ клиентов -->
+{% if by_client %}
+<div class="card mb-4">
+    <div class="card-header fw-bold">Топ клиентов</div>
+    <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+            <thead class="table-light">
+                <tr><th>Клиент</th><th>Заказов</th><th>Вес (кг)</th></tr>
+            </thead>
+            <tbody>
+                {% for c in by_client %}
+                <tr>
+                    <td>{{ c.client__name }}</td>
+                    <td><span class="badge bg-primary">{{ c.count }}</span></td>
+                    <td>{{ c.weight|floatformat:0 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Таблица заказов -->
+{% if orders %}
+<div class="card">
+    <div class="card-header fw-bold">Детализация ({{ orders|length }} записей)</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>№ заказа</th>
+                        <th>Клиент</th>
+                        <th>Груз</th>
+                        <th>Вес</th>
+                        <th>Объём</th>
+                        <th>Статус</th>
+                        <th>ТС</th>
+                        <th>Водитель</th>
+                        <th>Создан</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in orders %}
+                    <tr>
+                        <td><a href="{% url 'orders:detail' o.pk %}">{{ o.order_number }}</a></td>
+                        <td>{{ o.client.name|truncatechars:20 }}</td>
+                        <td>{{ o.cargo_name|truncatechars:20 }}</td>
+                        <td>{{ o.cargo_weight_kg|floatformat:0 }} кг</td>
+                        <td>{{ o.cargo_volume_m3|floatformat:1 }} м³</td>
+                        <td>
+                            {% if o.status == "draft" %}<span class="badge bg-secondary">Черновик</span>
+                            {% elif o.status == "confirmed" %}<span class="badge bg-info">Подтверждён</span>
+                            {% elif o.status == "assigned" %}<span class="badge bg-primary">Назначен</span>
+                            {% elif o.status == "in_transit" %}<span class="badge bg-warning text-dark">В пути</span>
+                            {% elif o.status == "loaded" %}<span class="badge bg-orange" style="background:#fd7e14;">Загружен</span>
+                            {% elif o.status == "unloaded" %}<span class="badge bg-teal" style="background:#20c997;">Выгружен</span>
+                            {% elif o.status == "completed" %}<span class="badge bg-success">Завершён</span>
+                            {% elif o.status == "cancelled" %}<span class="badge bg-danger">Отменён</span>
+                            {% endif %}
+                        </td>
+                        <td><code>{{ o.vehicle.plate_number|default:"—" }}</code></td>
+                        <td>{{ o.driver.full_name|default:"—" }}</td>
+                        <td>{{ o.created_at|date:"d.m.Y" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-clipboard-x" style="font-size: 3rem;"></i>
+        <p class="mt-2">Нет данных за выбранный период</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

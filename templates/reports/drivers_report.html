@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отчёт по водителям — Отчёты — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'reports:index' %}">Отчёты</a></li>
+                <li class="breadcrumb-item active">Отчёт по водителям</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0"><i class="bi bi-person-badge me-2"></i>Отчёт по водителям</h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&sort={{ current_sort }}&reverse={{ current_reverse }}&export=excel"
+           class="btn btn-success">
+            <i class="bi bi-file-earmark-excel me-1"></i>Excel
+        </a>
+        <a href="?date_from={{ date_from }}&date_to={{ date_to }}&sort={{ current_sort }}&reverse={{ current_reverse }}&export=csv"
+           class="btn btn-outline-success">
+            <i class="bi bi-filetype-csv me-1"></i>CSV
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Дата с</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Дата по</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Сортировка</label>
+                <select name="sort" class="form-select">
+                    <option value="trip_count" {% if current_sort == "trip_count" %}selected{% endif %}>По рейсам</option>
+                    <option value="order_count" {% if current_sort == "order_count" %}selected{% endif %}>По заказам</option>
+                    <option value="total_mileage" {% if current_sort == "total_mileage" %}selected{% endif %}>По пробегу</option>
+                    <option value="total_fuel" {% if current_sort == "total_fuel" %}selected{% endif %}>По топливу</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Порядок</label>
+                <select name="reverse" class="form-select">
+                    <option value="true" {% if current_reverse %}selected{% endif %}>По убыванию</option>
+                    <option value="false" {% if not current_reverse %}selected{% endif %}>По возрастанию</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search me-1"></i>Сформировать
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Таблица -->
+{% if driver_data %}
+<div class="card">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Водитель</th>
+                        <th>Телефон</th>
+                        <th>Категория</th>
+                        <th>Рейсов</th>
+                        <th>Заказов</th>
+                        <th>Завершено</th>
+                        <th>Отменено</th>
+                        <th>Пробег (км)</th>
+                        <th>Топливо (л)</th>
+                        <th>Ср. время рейса (ч)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in driver_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ d.driver.full_name }}</strong>
+                            {% if d.driver.license_category %}
+                            <div class="small text-muted">Категория: {{ d.driver.license_category }}</div>
+                            {% endif %}
+                        </td>
+                        <td>{{ d.driver.phone|default:"—" }}</td>
+                        <td>{{ d.driver.license_category }}</td>
+                        <td><span class="badge bg-info">{{ d.trip_count }}</span></td>
+                        <td>{{ d.order_count }}</td>
+                        <td><span class="badge bg-success">{{ d.orders_completed }}</span></td>
+                        <td>
+                            {% if d.orders_cancelled > 0 %}
+                                <span class="badge bg-danger">{{ d.orders_cancelled }}</span>
+                            {% else %}
+                                0
+                            {% endif %}
+                        </td>
+                        <td>{{ d.total_mileage }}</td>
+                        <td>{{ d.total_fuel }}</td>
+                        <td>{{ d.avg_trip_hours|default:"—" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
+        <p class="mt-2">Нет данных за выбранный период</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

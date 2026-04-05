@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ order.order_number }} — Логистика 365{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'orders:list' %}">Заказы</a></li>
+        <li class="breadcrumb-item active">{{ order.order_number }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+        <i class="bi bi-clipboard2-check"></i> {{ order.order_number }}
+        {% include "orders/includes/status_badge.html" with status=order.status %}
+    </h1>
+    <a href="{% url 'orders:list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="row g-4">
+
+    {# ---- Основная информация ---- #}
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-info-circle"></i> Информация о заказе</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">Клиент</label>
+                        <strong>{{ order.client.name }}</strong>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">Груз</label>
+                        <strong>{{ order.cargo_name }}</strong>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small d-block">Тип груза</label>
+                        <span>{{ order.cargo_type|default:"—" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small d-block">Вес, кг</label>
+                        <span>{{ order.cargo_weight_kg }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small d-block">Объём, м³</label>
+                        <span>{{ order.cargo_volume_m3 }}</span>
+                    </div>
+                    {% if order.hazard_class %}
+                        <div class="col-md-4">
+                            <label class="text-muted small d-block">Класс опасности</label>
+                            <span class="badge bg-danger">{{ order.hazard_class }}</span>
+                        </div>
+                    {% endif %}
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">Адрес погрузки</label>
+                        <span>{{ order.loading_address }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">Адрес разгрузки</label>
+                        <span>{{ order.unloading_address }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small d-block">Дата/время загрузки</label>
+                        <span>{{ order.loading_datetime|date:"d.m.Y H:i" }}</span>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="text-muted small d-block">Требуемая дата доставки</label>
+                        <span>{{ order.required_delivery_datetime|date:"d.m.Y H:i" }}</span>
+                    </div>
+                    {% if order.special_conditions %}
+                        <div class="col-12">
+                            <label class="text-muted small d-block">Особые условия</label>
+                            <p class="mb-0">{{ order.special_conditions }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ---- Назначенные ТС и водитель ---- #}
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-truck-front"></i> Транспорт и водитель</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">ТС</label>
+                        {% if order.vehicle %}
+                            <span>{{ order.vehicle.plate_number }} — {{ order.vehicle.get_vehicle_type_display }}</span>
+                        {% else %}
+                            <span class="text-muted">Не назначено</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small d-block">Водитель</label>
+                        {% if order.driver %}
+                            <span>{{ order.driver.full_name }}</span>
+                            {% if order.driver.phone %}
+                                <br><small class="text-muted"><i class="bi bi-telephone"></i> {{ order.driver.phone }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">Не назначен</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ---- Таймлайн статусов ---- #}
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-clock-history"></i> История статусов</div>
+            <div class="card-body">
+                {% if status_logs %}
+                    <div class="timeline">
+                        {% for log in status_logs %}
+                            <div class="d-flex mb-3">
+                                <div class="me-3">
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width:36px;height:36px;">
+                                        <i class="bi bi-flag text-white" style="font-size:0.8rem;"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% include "orders/includes/status_badge.html" with status=log.old_status %}
+                                        <i class="bi bi-arrow-right text-muted"></i>
+                                        {% include "orders/includes/status_badge.html" with status=log.new_status %}
+                                    </div>
+                                    {% if log.comment %}
+                                        <p class="mb-0 mt-1 small text-muted">{{ log.comment }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        {{ log.changed_at|date:"d.m.Y H:i" }}
+                                        {% if log.changed_by %}— {{ log.changed_by.get_full_name|default:log.changed_by.username }}{% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">История изменений пуста</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- События отслеживания ---- #}
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-geo-alt"></i> События отслеживания</div>
+            <div class="card-body">
+                {% if tracking_events %}
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Событие</th>
+                                    <th>Комментарий</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in tracking_events %}
+                                    <tr>
+                                        <td><small>{{ event.timestamp|date:"d.m.Y H:i" }}</small></td>
+                                        <td>{{ event.get_event_type_display }}</td>
+                                        <td><small class="text-muted">{{ event.comment|default:"—" }}</small></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">События ещё не записаны</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ---- Боковая панель ---- #}
+    <div class="col-lg-4">
+
+        {# ---- Изменить статус ---- #}
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-arrow-repeat"></i> Изменить статус</div>
+            <div class="card-body">
+                <form method="post" action="{% url 'orders:change_status' order.pk %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Новый статус</label>
+                        <select name="status" id="status" class="form-select" required>
+                            {% for value, label in statuses %}
+                                {% if value != order.status %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Комментарий</label>
+                        <textarea name="comment" id="comment" class="form-control" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-lg"></i> Изменить статус
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {# ---- Вложения ---- #}
+        <div class="card mb-4">
+            <div class="card-header"><i class="bi bi-paperclip"></i> Вложения</div>
+            <div class="card-body">
+                {% if attachments %}
+                    <ul class="list-unstyled mb-0">
+                        {% for att in attachments %}
+                            <li class="mb-2">
+                                <a href="{{ att.file.url }}" class="text-decoration-none" target="_blank">
+                                    <i class="bi bi-file-earmark"></i> {{ att.description|default:att.file.name|truncatechars:30 }}
+                                </a>
+                                <br><small class="text-muted">{{ att.uploaded_at|date:"d.m.Y" }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted mb-0">Нет вложений</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ---- Мета-информация ---- #}
+        <div class="card">
+            <div class="card-header"><i class="bi bi-gear"></i> Свойства</div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0 small">
+                    <li class="mb-2">
+                        <span class="text-muted">Создан:</span><br>
+                        {{ order.created_at|date:"d.m.Y H:i" }}
+                    </li>
+                    <li class="mb-2">
+                        <span class="text-muted">Обновлён:</span><br>
+                        {{ order.updated_at|date:"d.m.Y H:i" }}
+                    </li>
+                    <li>
+                        <span class="text-muted">Автор:</span><br>
+                        {{ order.created_by.get_full_name|default:order.created_by.username|default:"—" }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ route.name }} — Маршрут — Логистика 365{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="{% url 'routes:list' %}">Маршруты</a></li>
+                <li class="breadcrumb-item active">{{ route.name }}</li>
+            </ol>
+        </nav>
+        <h2 class="mb-0">
+            <i class="bi bi-signpost-2 me-2"></i>{{ route.name }}
+            {% include "routes/includes/status_badge.html" with status=route.status %}
+        </h2>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'routes:map' route.pk %}" class="btn btn-outline-success">
+            <i class="bi bi-map me-1"></i>Карта
+        </a>
+        {% if route.status == "draft" or route.status == "planned" %}
+        <a href="{% url 'routes:start' route.pk %}" class="btn btn-warning"
+           onclick="return confirm('Начать выполнение маршрута?')">
+            <i class="bi bi-play-fill me-1"></i>Начать
+        </a>
+        {% endif %}
+        {% if route.status == "in_progress" %}
+        <a href="{% url 'routes:complete' route.pk %}" class="btn btn-success"
+           onclick="return confirm('Завершить маршрут?')">
+            <i class="bi bi-check-circle me-1"></i>Завершить
+        </a>
+        {% endif %}
+        {% if route.status != "completed" and route.status != "cancelled" %}
+        <a href="{% url 'routes:cancel' route.pk %}" class="btn btn-outline-danger"
+           onclick="return confirm('Отменить маршрут?')">
+            <i class="bi bi-x-circle me-1"></i>Отменить
+        </a>
+        {% endif %}
+        <a href="{% url 'routes:calculate' route.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-clockwise me-1"></i>Пересчитать
+        </a>
+        <a href="{% url 'routes:edit' route.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Левая колонка: информация -->
+    <div class="col-lg-4">
+        <!-- Основная информация -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Информация</div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tr><td class="text-muted">ТС:</td><td><code>{{ route.vehicle.plate_number }}</code> — {{ route.vehicle.get_vehicle_type_display }}</td></tr>
+                    <tr><td class="text-muted">Водитель:</td><td>{{ route.driver.full_name }}</td></tr>
+                    <tr><td class="text-muted">Водитель тел.:</td><td>{{ route.driver.phone|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Отправление:</td><td>{{ route.departure_datetime|date:"d.m.Y H:i"|default:"—" }}</td></tr>
+                    <tr><td class="text-muted">Расчётное завершение:</td><td>{{ route.estimated_completion_datetime|date:"d.m.Y H:i"|default:"—" }}</td></tr>
+                    {% if route.completed_at %}
+                    <tr><td class="text-muted">Факт. завершение:</td><td>{{ route.completed_at|date:"d.m.Y H:i" }}</td></tr>
+                    {% endif %}
+                    {% if route.notes %}
+                    <tr><td class="text-muted" colspan="2"><strong>Примечания:</strong> {{ route.notes }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Расчётные параметры -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Параметры маршрута</div>
+            <div class="card-body">
+                <div class="row text-center g-2">
+                    <div class="col-6">
+                        <div class="p-2 border rounded">
+                            <div class="text-muted small">Расстояние</div>
+                            <div class="fs-5 fw-bold">{{ route.total_distance_km }} км</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 border rounded">
+                            <div class="text-muted small">Время</div>
+                            <div class="fs-5 fw-bold">{{ route.estimated_time_hours }} ч</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 border rounded">
+                            <div class="text-muted small">Топливо (расч.)</div>
+                            <div class="fs-5 fw-bold">{{ route.estimated_fuel_l }} л</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 border rounded">
+                            <div class="text-muted small">Топливо (факт)</div>
+                            <div class="fs-5 fw-bold">{{ route.actual_fuel_l|default:"—" }} л</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Загрузка ТС -->
+        <div class="card mb-3">
+            <div class="card-header fw-bold">Загрузка ТС</div>
+            <div class="card-body">
+                <!-- По весу -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">По весу</span>
+                        <span>{{ route.total_weight_kg|floatformat:0 }} / {{ route.vehicle.capacity_kg|floatformat:0 }} кг</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {% if route.load_percentage_weight > 90 %}bg-danger{% elif route.load_percentage_weight > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                             role="progressbar" style="width: {{ route.load_percentage_weight }}%">
+                            {{ route.load_percentage_weight }}%
+                        </div>
+                    </div>
+                </div>
+                <!-- По объёму -->
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">По объёму</span>
+                        <span>{{ route.total_volume_m3|floatformat:1 }} / {{ route.vehicle.volume_m3|floatformat:1 }} м³</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar {% if route.load_percentage_volume > 90 %}bg-danger{% elif route.load_percentage_volume > 70 %}bg-warning{% else %}bg-success{% endif %}"
+                             role="progressbar" style="width: {{ route.load_percentage_volume }}%">
+                            {{ route.load_percentage_volume }}%
+                        </div>
+                    </div>
+                </div>
+                {% if load_errors %}
+                <div class="alert alert-danger mt-2 mb-0">
+                    <strong>⚠ Превышение нагрузки!</strong>
+                    <ul class="mb-0 mt-1">
+                        {% for err in load_errors %}
+                        <li>{{ err }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Создано -->
+        <div class="card">
+            <div class="card-body small text-muted">
+                <div>Создан: {{ route.created_at|date:"d.m.Y H:i" }}</div>
+                <div>Создал: {{ route.created_by.get_full_name|default:route.created_by.username }}</div>
+                <div>Обновлён: {{ route.updated_at|date:"d.m.Y H:i" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: заказы + точки -->
+    <div class="col-lg-8">
+        <!-- Заказы в маршруте -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">Заказы в маршруте ({{ orders|length }})</span>
+            </div>
+            <div class="card-body p-0">
+                {% if orders %}
+                <table class="table table-sm table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>№ заказа</th>
+                            <th>Клиент</th>
+                            <th>Груз</th>
+                            <th>Вес</th>
+                            <th>Объём</th>
+                            <th>Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr>
+                            <td><a href="{% url 'orders:detail' order.pk %}">{{ order.order_number }}</a></td>
+                            <td>{{ order.client.name|truncatechars:25 }}</td>
+                            <td>{{ order.cargo_name }}</td>
+                            <td>{{ order.cargo_weight_kg|floatformat:0 }} кг</td>
+                            <td>{{ order.cargo_volume_m3|floatformat:1 }} м³</td>
+                            <td>
+                                <a href="{% url 'routes:remove_order' route.pk order.pk %}"
+                                   class="btn btn-sm btn-outline-danger"
+                                   onclick="return confirm('Удалить заказ из маршрута?')" title="Удалить">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="text-center py-3 text-muted">Нет заказов</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Добавить заказ -->
+        {% if available_orders %}
+        <div class="card mb-4">
+            <div class="card-header fw-bold">
+                <i class="bi bi-plus-circle me-1"></i>Добавить заказ
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% for order in available_orders %}
+                    <div class="col-md-6">
+                        <div class="card border">
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ order.order_number }}</strong>
+                                        <div class="small text-muted">{{ order.client.name|truncatechars:20 }}</div>
+                                    </div>
+                                    <a href="{% url 'routes:add_order' route.pk order.pk %}"
+                                       class="btn btn-sm btn-outline-success" title="Добавить">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Точки маршрута -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span class="fw-bold">
+                    <i class="bi bi-geo-alt me-1"></i>Точки маршрута
+                </span>
+                <a href="{% url 'routes:map' route.pk %}" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-arrows-fullscreen me-1"></i>На карте
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if waypoints %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px">#</th>
+                                <th>Тип</th>
+                                <th>Адрес</th>
+                                <th>Заказ</th>
+                                <th>План</th>
+                                <th>Факт</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for wp in waypoints %}
+                            <tr class="{% if wp.visited %}table-success{% endif %}">
+                                <td class="fw-bold text-center">{{ wp.sequence }}</td>
+                                <td>
+                                    {% if wp.point_type == "loading" %}
+                                        <span class="badge bg-primary">Погрузка</span>
+                                    {% elif wp.point_type == "unloading" %}
+                                        <span class="badge bg-danger">Разгрузка</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Промежут.</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ wp.address|truncatechars:40 }}</td>
+                                <td>
+                                    {% if wp.order %}
+                                        <a href="{% url 'orders:detail' wp.order.pk %}">{{ wp.order.order_number }}</a>
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if wp.scheduled_arrival %}
+                                        {{ wp.scheduled_arrival|date:"d.m H:i" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if wp.actual_arrival %}
+                                        {{ wp.actual_arrival|date:"d.m H:i" }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if wp.visited %}
+                                        <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                                    {% else %}
+                                        <span class="text-muted"><i class="bi bi-circle"></i></span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-geo-alt" style="font-size: 2rem;"></i>
+                    <p class="mt-2">Точки не добавлены. Добавьте заказы в маршрут.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
